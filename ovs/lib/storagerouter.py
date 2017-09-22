@@ -187,7 +187,8 @@ class StorageRouterController(object):
                                                     'sco_size': (int, StorageDriverClient.TLOG_MULTIPLIER_MAP.keys()),
                                                     'cluster_size': (int, StorageDriverClient.CLUSTER_SIZES),
                                                     'write_buffer': (int, {'min': 128, 'max': 10240}),
-                                                    'dtl_transport': (str, StorageDriverClient.VPOOL_DTL_TRANSPORT_MAP.keys())}),
+                                                    'dtl_transport': (str, StorageDriverClient.VPOOL_DTL_TRANSPORT_MAP.keys()),
+                                                    'max_tlogs_behind': (int, {'min': 0, 'max': 4 ** 32 - 1}, False)}),
                            'mds_config_params': (dict, {'mds_safety': (int, {'min': 1, 'max': 5}, False)}, False),
                            'fragment_cache_on_read': (bool, None),
                            'fragment_cache_on_write': (bool, None),
@@ -298,8 +299,7 @@ class StorageRouterController(object):
             vpool.save()
             # Configure this asap because certain flows don't check the vPool status yet and thus rely on the availability of this key
             Configuration.set(key='/ovs/vpools/{0}/mds_config'.format(vpool.guid),
-                              value={'mds_tlogs': 100,
-                                     'mds_safety': parameters.get('mds_config_params', {}).get('mds_safety', 3),
+                              value={'mds_safety': parameters.get('mds_config_params', {}).get('mds_safety', 3),
                                      'mds_maxload': 75})
         else:
             vpool.status = VPool.STATUSES.EXTENDING
@@ -409,7 +409,7 @@ class StorageRouterController(object):
             if new_vpool is False:
                 current_vpool_configuration = vpool.configuration
                 for key in sd_config_params.keys():
-                    if key == 'mds_safety':  # MDS safety for a vPool can be overruled when extending
+                    if key == 'max_tlogs_behind':  # Max tlogs behind for a vPool can be different for each StorageDriver
                         continue
                     current_value = current_vpool_configuration.get(key)
                     specified_value = sd_config_params[key]
@@ -832,7 +832,8 @@ class StorageRouterController(object):
                                  'dtl_throttle_usecs': 4000,
                                  'default_cluster_size': cluster_size * 1024,
                                  'number_of_scos_in_tlog': tlog_multiplier,
-                                 'non_disposable_scos_factor': sco_factor}
+                                 'non_disposable_scos_factor': sco_factor,
+                                 'metadata_mds_slave_max_tlogs_behind': sd_config_params.get('max_tlogs_behind', 50)}
 
         queue_urls = []
         mq_protocol = Configuration.get('/ovs/framework/messagequeue|protocol')

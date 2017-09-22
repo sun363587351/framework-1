@@ -42,7 +42,9 @@ from ovs.extensions.generic.sshclient import SSHClient, UnableToConnectException
 from ovs.extensions.generic.system import System
 from ovs_extensions.generic.toolbox import ExtensionsToolbox
 from ovs.extensions.generic.volatilemutex import volatile_mutex
-from ovs.extensions.storageserver.storagedriver import LOG_LEVEL_MAPPING, MDSMetaDataBackendConfig, MDSNodeConfig, MetadataServerClient, SRCObjectNotFoundException, StorageDriverConfiguration
+from ovs.extensions.storageserver.storagedriver import\
+    InvalidOperationException, LOG_LEVEL_MAPPING, MDSMetaDataBackendConfig, MDSNodeConfig,\
+    MetadataServerClient, SRCObjectNotFoundException, StorageDriverConfiguration
 from ovs.lib.helpers.decorators import ovs_task
 from ovs.lib.helpers.toolbox import Schedule
 from volumedriver.storagerouter import storagerouterclient
@@ -487,7 +489,7 @@ class MDSServiceController(object):
         excluded_storagerouters = [StorageRouter(sr_guid) for sr_guid in excluded_storagerouter_guids]
         MDSServiceController._logger.info('vDisk {0} - Start checkup for vDisk {1}'.format(vdisk.guid, vdisk.name))
 
-        vdisk.invalidate_dynamics(['info', 'storagerouter_guid'])
+        vdisk.invalidate_dynamics(['info', 'storagedriver_id', 'storagerouter_guid'])
         if vdisk.storagerouter_guid is None:
             raise SRCObjectNotFoundException('Cannot ensure MDS safety for vDisk {0} with guid {1} because vDisk is not attached to any StorageRouter'.format(vdisk.name, vdisk.guid))
 
@@ -498,11 +500,15 @@ class MDSServiceController(object):
         if vdisk.info['live_status'] != VDisk.STATUSES.RUNNING:
             raise RuntimeError('vDisk {0} is not {1}, cannot update MDS configuration'.format(vdisk.guid, VDisk.STATUSES.RUNNING))
 
+        if vdisk.storagedriver_id is None:
+            raise RuntimeError('vDisk {0} with guid {1} does not have a StorageDriver attached to it'.format(vdisk.name, vdisk.guid))
+
+        sd_config = StorageDriverConfiguration(vpool_guid=vdisk.vpool_guid, storagedriver_id=vdisk.storagedriver_id).configuration
         mds_config = Configuration.get('/ovs/vpools/{0}/mds_config'.format(vdisk.vpool_guid))
-        tlogs = mds_config['mds_tlogs']
         safety = mds_config['mds_safety']
         max_load = mds_config['mds_maxload']
-        MDSServiceController._logger.debug('vDisk {0} - Safety: {1}, Max load: {2}%, Tlogs: {3}'.format(vdisk.guid, safety, max_load, tlogs))
+        max_tlogs_behind = sd_config.get('volume_manager', {}).get('metadata_mds_slave_max_tlogs_behind', 50)
+        MDSServiceController._logger.debug('vDisk {0} - Safety: {1}, Max load: {2}%, Tlogs: {3}'.format(vdisk.guid, safety, max_load, max_tlogs_behind))
 
         vdisk.reload_client('storagedriver')
         vdisk.reload_client('objectregistry')
@@ -711,7 +717,7 @@ class MDSServiceController(object):
             if re_used_local_slave_service is None:
                 # There's no non-overloaded local slave found. Keep the current master (if available) and add a local MDS (if available) as slave.
                 # Next iteration, the newly added slave will be checked if it has caught up already
-                # If amount of tlogs to catchup is < configured amount of tlogs --> we wait for catchup, so master can be removed and slave can be promoted
+                # If amount of tlogs to catchup is < configured amount of max tlogs behind --> we wait for catchup, so master can be removed and slave can be promoted
                 if master_service is not None:
                     MDSServiceController._logger.debug('vDisk {0} - Keeping current master service'.format(vdisk.guid))
                     new_services.append(master_service)
@@ -738,7 +744,7 @@ class MDSServiceController(object):
                         raise
 
                 MDSServiceController._logger.debug('vDisk {0} - Recycled slave is {1} tlogs behind'.format(vdisk.guid, tlogs_behind_master))
-                if tlogs_behind_master < tlogs:
+                if tlogs_behind_master < max_tlogs_behind:
                     start = time.time()
                     try:
                         client.catch_up(str(vdisk.volume_id), dry_run=False)
@@ -887,7 +893,7 @@ class MDSServiceController(object):
             #     * In case of a timeout, the manual actions are logged and user knows the ensure_safety has failed
             #     * In any other case, the newly created namespaces are deleted
             raise
-        except Exception:
+        except (InvalidOperationException, Exception):
             MDSServiceController._logger.exception('vDisk {0}: Failed to update the metadata backend configuration'.format(vdisk.guid))
             update_failure = True
             raise

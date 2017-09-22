@@ -39,9 +39,9 @@ from volumedriver.storagerouter.storagerouterclient import \
     ReadCacheBehaviour, ReadCacheMode, SnapshotNotFoundException, \
     Role, Severity, Statistics, VolumeInfo
 try:
-    from volumedriver.storagerouter.storagerouterclient import VolumeRestartInProgressException
+    from volumedriver.storagerouter.storagerouterclient import InvalidOperationException, VolumeRestartInProgressException
 except ImportError:
-    from ovs.extensions.storageserver.tests.mockups import VolumeRestartInProgressException
+    from ovs.extensions.storageserver.tests.mockups import InvalidOperationException, VolumeRestartInProgressException
 
 if os.environ.get('RUNNING_UNITTESTS') == 'True':
     from ovs.extensions.storageserver.tests.mockups import \

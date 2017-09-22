@@ -170,7 +170,6 @@ class DalHelper(object):
             else:
                 vpool = vpools[vpool_id]
             srclients[vpool_id] = StorageRouterClient(vpool.guid, None)
-            Configuration.set('/ovs/vpools/{0}/mds_config|mds_tlogs'.format(vpool.guid), 100)
             Configuration.set('/ovs/vpools/{0}/mds_config|mds_safety'.format(vpool.guid), 2)
             Configuration.set('/ovs/vpools/{0}/mds_config|mds_maxload'.format(vpool.guid), 75)
             Configuration.set('/ovs/vpools/{0}/proxies/scrub/generic_scrub'.format(vpool.guid), json.dumps({}, indent=4), raw=True)
@@ -317,7 +316,7 @@ class DalHelper(object):
             mds_backend_config = DalHelper.generate_mds_metadata_backend_config(mds_services)
             volume_id = srclient.create_volume(devicename, mds_backend_config, 0, str(storagedriver_id))
             if len(mds_services) == 1:
-                MDSClient.set_catchup(mds_services[0], volume_id, 50)
+                MDSClient.set_catchup(mds_services[0], volume_id, 20)
             vdisk = VDisk()
             vdisk.name = str(i)
             vdisk.devicename = devicename

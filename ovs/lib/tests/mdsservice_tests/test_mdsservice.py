@@ -562,8 +562,8 @@ class MDSServices(unittest.TestCase):
         self._check_reality(configs=configs, loads=loads, vdisks=vdisks, mds_services=mds_services)
 
         # The next run, after tlogs are caught up, a master switch should be executed
-        MDSClient.set_catchup('10.0.0.2:5', vdisks[3].volume_id, 50)
-        MDSClient.set_catchup('10.0.0.2:5', vdisks[4].volume_id, 50)
+        MDSClient.set_catchup('10.0.0.2:5', vdisks[3].volume_id, 20)
+        MDSClient.set_catchup('10.0.0.2:5', vdisks[4].volume_id, 20)
         configs = [[{'ip': '10.0.0.1', 'port': 1}, {'ip': '10.0.0.2', 'port': 5}, {'ip': '10.0.0.3', 'port': 3}],
                    [{'ip': '10.0.0.1', 'port': 1}, {'ip': '10.0.0.2', 'port': 5}, {'ip': '10.0.0.4', 'port': 4}],
                    [{'ip': '10.0.0.2', 'port': 5}, {'ip': '10.0.0.1', 'port': 1}, {'ip': '10.0.0.3', 'port': 3}],
@@ -1097,8 +1097,8 @@ class MDSServices(unittest.TestCase):
         self._check_reality(configs=configs, loads=loads, vdisks=vdisks, mds_services=mds_services)
 
         # The next run, after tlogs are caught up, a master switch should be executed
-        MDSClient.set_catchup('10.0.0.2:5', vdisks[3].volume_id, 50)
-        MDSClient.set_catchup('10.0.0.2:5', vdisks[4].volume_id, 50)
+        MDSClient.set_catchup('10.0.0.2:5', vdisks[3].volume_id, 20)
+        MDSClient.set_catchup('10.0.0.2:5', vdisks[4].volume_id, 20)
         configs = [[{'ip': '10.0.0.1', 'port': 1}, {'ip': '10.0.0.3', 'port': 3}],
                    [{'ip': '10.0.0.1', 'port': 1}, {'ip': '10.0.0.4', 'port': 4}],
                    [{'ip': '10.0.0.2', 'port': 5}, {'ip': '10.0.0.3', 'port': 3}],

@@ -66,6 +66,8 @@ class OVSMigrator(object):
             mds_safety_key = '/ovs/framework/storagedriver'
             if Configuration.exists(key=mds_safety_key):
                 current_mds_settings = Configuration.get(key=mds_safety_key)
+                if 'mds_tlogs' in current_mds_settings:
+                    current_mds_settings.pop('mds_tlogs')
                 for vpool in VPoolList.get_vpools():
                     vpool_key = '/ovs/vpools/{0}'.format(vpool.guid)
                     if Configuration.dir_exists(key=vpool_key):

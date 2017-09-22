@@ -25,6 +25,11 @@ import threading
 from volumedriver.storagerouter.storagerouterclient import DTLConfigMode, ObjectNotFoundException
 
 
+class InvalidOperationException(Exception):
+    """ InvalidOperationException mockup for backwards compatibility """
+    pass
+
+
 class VolumeRestartInProgressException(Exception):
     """ VolumeRestartInProgressException mockup for backwards compatibility """
     pass
