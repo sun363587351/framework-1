@@ -164,6 +164,8 @@ class DiskController(object):
 
         # Sync the model
         for disk in storagerouter.disks:
+            if disk.model == 'LXD_FAKE':
+                continue
             disk_info = None
             for alias in disk.aliases:
                 if alias in alias_name_mapping:
