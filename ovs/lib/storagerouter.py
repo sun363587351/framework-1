@@ -327,6 +327,9 @@ class StorageRouterController(object):
                 if role not in [DiskPartition.ROLES.DB, DiskPartition.ROLES.DTL, DiskPartition.ROLES.WRITE, DiskPartition.ROLES.SCRUB]:
                     continue
                 for part in part_info:
+                    dpart = DiskPartition(part['guid'])
+                    if dpart.disk.model == 'LXD_FAKE':
+                        continue
                     if not client.is_mounted(part['mountpoint']) and part['mountpoint'] != DiskPartition.VIRTUAL_STORAGE_LOCATION:
                         error_messages.append('Mount point {0} is not mounted'.format(part['mountpoint']))
 
