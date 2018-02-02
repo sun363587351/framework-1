@@ -18,36 +18,34 @@
 GenericTaskController module
 """
 
-import os
 import copy
 import time
 import uuid
+import socket
 from datetime import datetime, timedelta
 from Queue import Empty, Queue
 from threading import Thread
 from time import mktime
 from ovs.dal.hybrids.diskpartition import DiskPartition
-from ovs.dal.hybrids.servicetype import ServiceType
 from ovs.dal.hybrids.storagerouter import StorageRouter
 from ovs.dal.hybrids.vdisk import VDisk
 from ovs.dal.hybrids.vpool import VPool
-from ovs.dal.lists.servicelist import ServiceList
 from ovs.dal.lists.storagedriverlist import StorageDriverList
 from ovs.dal.lists.storagerouterlist import StorageRouterList
 from ovs.dal.lists.vdisklist import VDiskList
 from ovs.dal.lists.vpoollist import VPoolList
-from ovs.extensions.db.arakooninstaller import ArakoonClusterConfig
 from ovs.extensions.generic.configuration import Configuration
 from ovs_extensions.generic.filemutex import file_mutex
 from ovs.extensions.generic.logger import Logger
 from ovs_extensions.generic.remote import remote
-from ovs.extensions.generic.sshclient import NotAuthenticatedException, SSHClient, UnableToConnectException
+from ovs.extensions.generic.sshclient import NotAuthenticatedException, SSHClient, UnableToConnectException, TimeOutException
 from ovs.extensions.generic.system import System
 from ovs_extensions.generic.toolbox import ExtensionsToolbox
 from ovs.extensions.generic.volatilemutex import volatile_mutex
 from ovs.extensions.packages.packagefactory import PackageFactory
 from ovs.extensions.services.servicefactory import ServiceFactory
 from ovs.extensions.storage.volatilefactory import VolatileFactory
+from ovs.lib.helpers.arakoon import ArakoonHelper
 from ovs.lib.helpers.decorators import ovs_task
 from ovs.lib.helpers.toolbox import Toolbox, Schedule
 from ovs.lib.mdsservice import MDSServiceController
@@ -516,55 +514,67 @@ class GenericController(object):
         Collapse Arakoon's Tlogs
         :return: None
         """
-        from ovs_extensions.generic.toolbox import ExtensionsToolbox
-
         GenericController._logger.info('Arakoon collapse started')
-        cluster_info = []
-        storagerouters = StorageRouterList.get_storagerouters()
-        if os.environ.get('RUNNING_UNITTESTS') != 'True':
-            cluster_info = [('cacc', storagerouters[0])]
+        workload = ArakoonHelper.get_basic_config()
+        collapse_stats= ArakoonHelper.retrieve_collapse_stats(workload)
+        for cluster_name, metadata in collapse_stats.iteritems():
+            for node, stats in metadata['collapse_result'].iteritems():
+                ip = node.ip
+                node_id = metadata['ips:node_ids'][ip]
+                identifier_log = 'Arakoon cluster {0} on node {1}'.format(cluster_name, ip)
 
-        cluster_names = []
-        for service in ServiceList.get_services():
-            if service.is_internal is True and service.type.name in (ServiceType.SERVICE_TYPES.ARAKOON,
-                                                                     ServiceType.SERVICE_TYPES.NS_MGR,
-                                                                     ServiceType.SERVICE_TYPES.ALBA_MGR):
-                cluster = ExtensionsToolbox.remove_prefix(service.name, 'arakoon-')
-                if cluster in cluster_names and cluster not in ['cacc', 'unittest-cacc']:
+                if len(stats['errors']) > 0:
+                    # Determine where issues were found
+                    for step, exception in stats['errors']:
+                        if step == 'build_client':
+                            try:
+                                # Raise the thrown exception
+                                raise exception
+                            except TimeOutException:
+                                GenericController._logger.error('Connection to {0} has timed out'.format(identifier_log))
+                            except (socket.error, UnableToConnectException):
+                                GenericController._logger.error('Connection to {0} could not be established'.format(identifier_log))
+                            except NotAuthenticatedException:
+                                GenericController._logger.error('Connection to {0} could not be authenticated. This node has no access to the Arakoon node.'.format(identifier_log))
+                            except Exception:
+                                message = 'Connection to {0} could not be established due to an unhandled exception.'.format(identifier_log)
+                                GenericController._logger.exception(message)
+                        elif step == 'stat_dir':
+                            try:
+                                raise exception
+                            except Exception:
+                                message = 'Unable to list the contents of the tlog directory ({0}) for {1}'.format(metadata['config'], cluster_name)
+                                GenericController._logger.exception(message)
                     continue
-                cluster_names.append(cluster)
-                cluster_info.append((cluster, service.storagerouter))
-        workload = {}
-        cluster_config_map = {}
-        for cluster, storagerouter in cluster_info:
-            GenericController._logger.debug('  Collecting info for cluster {0}'.format(cluster))
-            ip = storagerouter.ip if cluster in ['cacc', 'unittest-cacc'] else None
-            try:
-                config = ArakoonClusterConfig(cluster_id=cluster, source_ip=ip)
-                cluster_config_map[cluster] = config
-            except:
-                GenericController._logger.exception('  Retrieving cluster information on {0} for {1} failed'.format(storagerouter.ip, cluster))
-                continue
-            for node in config.nodes:
-                if node.ip not in workload:
-                    workload[node.ip] = {'node_id': node.name,
-                                         'clusters': []}
-                workload[node.ip]['clusters'].append((cluster, ip))
-        for storagerouter in storagerouters:
-            try:
-                if storagerouter.ip not in workload:
-                    continue
-                node_workload = workload[storagerouter.ip]
-                client = SSHClient(storagerouter)
-                for cluster, ip in node_workload['clusters']:
-                    try:
-                        GenericController._logger.debug('  Collapsing cluster {0} on {1}'.format(cluster, storagerouter.ip))
-                        client.run(['arakoon', '--collapse-local', node_workload['node_id'], '2', '-config', cluster_config_map[cluster].external_config_path])
-                        GenericController._logger.debug('  Collapsing cluster {0} on {1} completed'.format(cluster, storagerouter.ip))
-                    except:
-                        GenericController._logger.exception('  Collapsing cluster {0} on {1} failed'.format(cluster, storagerouter.ip))
-            except UnableToConnectException:
-                GenericController._logger.error('  Could not collapse any cluster on {0} (not reachable)'.format(storagerouter.name))
+
+                try:
+                    storagerouter = StorageRouterList.get_by_ip(ip)
+                    client = SSHClient(storagerouter)
+                    headdb_files = stats['result']['headDB']
+                    avail_size = stats['result']['avail_size']
+                    headdb_size = sum([int(i[2]) for i in headdb_files])
+                    # Check if there is enough memory for collapse
+                    collapse_size_msg = 'Spare space for local collapse is '
+                    if avail_size < 2 * headdb_size:
+                        GenericController._logger.exception('{0} insufficient (n <2 x head.db size')
+                    else:
+                        if avail_size >= headdb_size * 4:
+                            GenericController._logger.debug('{0} sufficient (n > 4x head.db size)'.format(collapse_size_msg))
+                        elif avail_size >= headdb_size * 3:
+                            GenericController._logger.debug('{0} running short (n > 3x head.db size)'.format(collapse_size_msg))
+                        elif avail_size >= headdb_size * 2:
+                            GenericController._logger.warning('{0} just enough (n > 2x head.db size'.format(collapse_size_msg))
+                        # Collapse
+                        try:
+                            GenericController._logger.debug('  Collapsing cluster {0} on {1}'.format(cluster_name, storagerouter.ip))
+                            client.run(['arakoon', '--collapse-local', node_id, '2', '-config', metadata['config'].external_config_path])
+                            GenericController._logger.debug('  Collapsing cluster {0} on {1} completed'.format(cluster_name, storagerouter.ip))
+                        except Exception:
+                            GenericController._logger.exception('  Collapsing cluster {0} on {1} failed'.format(cluster_name, storagerouter.ip))
+
+                except Exception:
+                    GenericController._logger.error('  Could not collapse any cluster on {0} (not reachable)'.format(storagerouter.name))
+
         GenericController._logger.info('Arakoon collapse finished')
 
     @staticmethod

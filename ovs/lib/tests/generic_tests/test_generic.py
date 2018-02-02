@@ -765,7 +765,7 @@ class Generic(unittest.TestCase):
         generic_logs = Logger._logs.get('lib', {})
         for cluster_name in successful_clusters + failed_clusters + external_clusters:
             collect_msg = ('DEBUG', 'Collecting info for cluster {0}'.format(cluster_name))
-            unreachable_msg = ('ERROR', 'Could not collapse any cluster on {0} (not reachable)'.format(storagerouter_2.name))
+            unreachable_msg = ('ERROR', 'Connection to Arakoon cluster {0} on node {1} could not be established'.format(cluster_name, storagerouter_2.ip))
             end_collapse_msg = ('DEBUG', 'Collapsing cluster {0} on {1} completed'.format(cluster_name, storagerouter_1.ip))
             start_collapse_msg = ('DEBUG', 'Collapsing cluster {0} on {1}'.format(cluster_name, storagerouter_1.ip))
             failed_collapse_msg = ('ERROR', 'Collapsing cluster {0} on {1} failed'.format(cluster_name, storagerouter_1.ip))
