@@ -15,8 +15,8 @@
 // but WITHOUT ANY WARRANTY of any kind.
 /*global define */
 define([
-    'jquery', 'knockout'
-], function ($, ko) {
+    'jquery', 'knockout', 'viewmodels/services/storagedriver'
+], function ($, ko, storagedriverService) {
     "use strict";
     return function (options) {
         var self = this;
@@ -29,14 +29,9 @@ define([
         self.dtlModes = ko.observableArray([]);
         self.dtlTransportModes = ko.observableArray([]);
 
-        self.advancedSettings = ko.observable();
-        self.acceptedAdvancedSettings = ko.observable();
+        self.settings = ko.observable();
+        self.acceptedSettings = ko.observable();
 
-        // Computed
-        self.canContinue = ko.pureComputed(function () {
-            var reasons = [], fields = [];
-            return {value: reasons.length === 0, reasons: reasons, fields: fields};
-        });
         self.dtlMode = ko.computed({
             deferEvaluation: true,  // Wait with computing for an actual subscription
             write: function (mode) {
@@ -55,8 +50,9 @@ define([
             }
         });
         self.canContinue = ko.pureComputed(function () {
-            var reasons = [], fields = [];
+            var value = true, reasons = [], fields = [];
             if (self.data.globalWriteBufferMax() < self.data.storageDriverParams.globalWriteBuffer() === true) {
+                value = false;
                 fields.push('writeBufferGlobal');
                 reasons.push($.t('ovs:wizards.add_vpool.gather_config.over_allocation'));
             }
@@ -68,6 +64,7 @@ define([
             var maximum = amount_of_proxies;
             var srPartitions = self.data.getStorageRouterMetadata(self.data.storageRouter().guid()).metadata.partitions;
             if (srPartitions === undefined || srPartitions['WRITE'] === undefined) {
+                value = false;
                 fields.push('writeBufferGlobal');
                 reasons.push($.t('ovs:wizards.add_vpool.gather_config.noMetadata'));
             } else {
@@ -94,6 +91,7 @@ define([
                             maximum -= 1;
                         }
                         var thisMaximum = proxies > amount_of_proxies ? Math.floor(maximum / 2) : maximum;
+                        value = false;
                         fields.push('writeBufferGlobal');
                         if (thisMaximum === 0) {
                             reasons.push($.t('ovs:wizards.add_vpool.gather_config.cache_no_proxies'));
@@ -103,14 +101,26 @@ define([
                     }
                 }
             }
-            return { value: reasons.length === 0, reasons: reasons, fields: fields };
+            return { value: value, reasons: reasons, fields: fields };
+        });
+        self.gatherWarnings = ko.pureComputed(function(){
+            var value = true, reasons = [], fields = [];
+             if (self.data.configParams.non_disposable_scos_factor() < storagedriverService.minNonDisposableScosFactor) {
+                //value = false;
+                fields.push('nonDisposableScoFactor');
+
+                reasons.push($.t('ovs:wizards.add_vpool.gather_config.non_disposable_factor_too_small', {minimal_number: storagedriverService.minNonDisposableScosFactor,
+                                                                                                            scos_per_tlog: $.t('ovs:wizards.add_vpool.gather_config.scos_per_tlog'),
+                                                                                                            volume_write_buffer: $.t('ovs:wizards.add_vpool.gather_config.volume_write_buffer')}));
+            }
+            return { value: reasons.length === 0, reasons: reasons, fields: fields}
         });
 
         // Subscriptions
-        self.advancedSettings.subscribe(function(newValue) {
-            self.data.configParams.advanced(newValue);
+        self.settings.subscribe(function(newValue) {
+            self.data.configParams(newValue);
             if (newValue === false) {
-                self.acceptedAdvancedSettings(newValue)
+                self.acceptedSettings(newValue)
             }
         });
 
@@ -121,13 +131,7 @@ define([
             self.dtlTransportModes(configParams.dtlTransportModes.filter(function(item){
                 return !(item === 'rdma' && self.data.storageRouter().rdmaCapable() === false);
             }));
-            self.data.configParams.subscribeConfigurations();
-            self.data.configParams.advanced_config.subscribeConfigurations();
 
-        };
-        self.deactivate = function() {
-            self.data.configParams.unSubscribeConfigurations();
-            self.data.configParams.advanced_config.unSubscribeConfigurations();
         };
     };
 });

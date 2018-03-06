@@ -18,6 +18,7 @@ but WITHOUT ANY WARRANTY of any kind.
 <div>
     <!-- ko with: data.configParams -->
     <!-- Root is the wizard, as is the parent-->
+    <!-- ko let: { warningFields: $root.gatherWarnings().fields, errorFields: $root.canContinue().fields} -->
     <div style="margin-bottom: 5px;">
         <span data-i18n="ovs:wizards.add_vpool.gather_config.dtl"></span>
         <a data-bind="popover: {
@@ -53,7 +54,7 @@ but WITHOUT ANY WARRANTY of any kind.
     <div style="margin-bottom: 5px;">
         <span data-i18n="ovs:wizards.add_vpool.gather_config.title_write_buffer"></span>
     </div>
-    <div class="form-group" data-bind="css: { 'has-error': $root.canContinue().fields.contains('writeBufferGlobal') }">
+    <div class="form-group" data-bind="css: { 'has-error': errorFields.contains('writeBufferGlobal'), 'has-warning': warningFields.contains('writeBufferGlobal')}">
         <label class="col-lg-4 control-label" for="writeBufferGlobal" data-i18n="ovs:wizards.add_vpool.gather_config.global_write_buffer"></label>
         <div class="col-lg-2">
             <input type="text" id="writeBufferGlobal" class="autofocus form-control" style="text-align: center; width: 110px;"
@@ -63,23 +64,6 @@ but WITHOUT ANY WARRANTY of any kind.
     </div>
     <div style="margin-bottom: 5px;">
         <span data-i18n="ovs:wizards.add_vpool.gather_config.volume"></span>
-    </div>
-    <div class="form-group">
-        <label class="col-lg-4 control-label" for="scoSize" data-i18n="ovs:wizards.add_vpool.gather_config.sco_size"></label>
-        <div class="col-lg-7" style="margin-bottom: -5px;">
-            <span id="scoSize"
-                  data-bind="dropdown: {
-                                 items: scoSizes,
-                                 target: sco_size,
-                                 text: function(item) {
-                                     if (item === undefined || item === null) {
-                                         return '-';
-                                     }
-                                     return item + ' ' + $.t('ovs:generic.units.mib');
-                                 }
-                             }">
-            </span>
-        </div>
     </div>
     <div class="form-group">
         <label class="col-lg-4 control-label" for="clusterSize" data-i18n="ovs:wizards.add_vpool.gather_config.cluster_size"></label>
@@ -99,51 +83,54 @@ but WITHOUT ANY WARRANTY of any kind.
         </div>
     </div>
     <div class="form-group">
-        <label class="col-lg-4 control-label" for="writeBufferVolume" data-i18n="ovs:wizards.add_vpool.gather_config.volume_write_buffer"></label>
+        <label class="col-lg-4 control-label" for="scoSize" data-i18n="ovs:wizards.add_vpool.gather_config.sco_size"></label>
+        <div class="col-lg-7" style="margin-bottom: -5px;">
+            <span id="scoSize"
+                  data-bind="dropdown: {
+                                 items: scoSizes,
+                                 target: sco_size,
+                                 text: function(item) {
+                                     if (item === undefined || item === null) {
+                                         return '-';
+                                     }
+                                     return item + ' ' + $.t('ovs:generic.units.mib');
+                                 }
+                             }">
+            </span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-4 control-label" for="writeBufferVolume" data-i18n="ovs:wizards.add_vpool.gather_config.volume_write_buffer_with_colon"></label>
         <div class="col-lg-2">
             <input type="text" id="writeBufferVolume" class="autofocus form-control" style="text-align: center; width: 110px;"
                    data-bind="value: write_buffer, valueUpdate: 'afterkeydown'" />
         </div>
         <label class="col-lg-1 control-label" data-i18n="ovs:generic.units.mib"></label>
     </div>
-    <!-- ko if: $root.data.enableAdvancedConfig -->
-    <!-- ko with: advanced_config -->
     <div class="form-group">
-        <div class="col-lg-7">
-            <input type="checkbox" id="advanced" style="margin-top: 9px; margin-left: 15px;" data-bind="checked: $root.advancedSettings">
-            <label for="advanced" class="help-block" data-i18n="ovs:wizards.add_vpool.gather_config.advanced.advanced_text" style="padding-left: 10px; display: inline-block;"></label>
+        <label class="col-lg-4 control-label" for="scos_per_tlog" data-i18n="ovs:wizards.add_vpool.gather_config.scos_per_tlog_with_colon"></label>
+        <div class="col-lg-2">
+            <input type="text" id="scos_per_tlog" class="autofocus form-control" style="text-align: center; width: 110px;"
+                   data-bind="value: scos_per_tlog, valueUpdate: 'afterkeydown'" />
         </div>
     </div>
-    <div data-bind="visible: $root.advancedSettings() && !$root.acceptedAdvancedSettings()">
-        <div class="alert alert-warning">
-            <p data-i18n="[html]ovs:wizards.add_vpool.gather_config.advanced.advanced_warning"></p>
-        </div>
-        <div class="form-group">
-            <div class="col-lg-7">
-                <input type="checkbox" id="accept" style="margin-top: 9px; margin-left: 15px;" data-bind="checked: $root.acceptedAdvancedSettings">
-                <label for="accept" class="help-block" data-i18n="ovs:wizards.add_vpool.gather_config.advanced.accept_text" style="padding-left: 10px; display: inline-block;"></label>
-            </div>
+
+    <div style="margin-bottom: 5px;">
+        <span data-i18n="ovs:wizards.add_vpool.gather_config.non_disposable_scos_factor"></span>
+        <a data-bind="popover: {
+                          title: 'ovs:wizards.add_vpool.gather_config.non_disposable_factor_help_title',
+                          content: 'ovs:wizards.add_vpool.gather_config.non_disposable_factor_help'
+                      }"
+           class="hand fa noline" data-i18n="[html]ovs:icons.help" style="margin-left: 5px; color: #377ca8;" role="button" tabindex="-1">
+        </a>
+    </div>
+    <div class="form-group">
+        <label class="col-lg-4 control-label" for="non_disposable_scos_factor" data-i18n="ovs:wizards.add_vpool.gather_config.non_disposable_scos_factor"></label>
+        <div class="col-lg-2">
+            <input type="text" id="non_disposable_scos_factor" class="autofocus form-control" style="text-align: center; width: 110px;"
+                  data-bind="value: non_disposable_scos_factor, valueUpdate: 'afterkeydown'" disabled/>
         </div>
     </div>
-    <div data-bind="visible: $root.advancedSettings() && $root.acceptedAdvancedSettings()">
-        <p class="help-block" data-i18n="ovs:wizards.add_vpool.gather_config.advanced.calculate_message" style="padding-left: 10px; display: inline-block;"></p>
-        <div class="form-group">
-            <label class="col-lg-4 control-label" for="number_of_scos_in_tlog" data-i18n="ovs:wizards.add_vpool.gather_config.advanced.number_of_scos_in_tlog"></label>
-            <div class="col-lg-2">
-                <input type="text" id="number_of_scos_in_tlog" class="autofocus form-control" style="text-align: center; width: 110px;"
-                       data-bind="value: number_of_scos_in_tlog, valueUpdate: 'afterkeydown'" />
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="col-lg-4 control-label" for="number_of_scos_in_tlog" data-i18n="ovs:wizards.add_vpool.gather_config.advanced.non_disposable_scos_factor"></label>
-            <div class="col-lg-2">
-                <input type="text" id="non_disposable_scos_factor" class="autofocus form-control" style="text-align: center; width: 110px;"
-                       data-bind="value: non_disposable_scos_factor, valueUpdate: 'afterkeydown'" />
-            </div>
-        </div>
-    </div>
-    <!-- /ko -->
-    <!-- /ko -->
     <div style="margin-bottom: 5px;">
         <span data-i18n="ovs:wizards.add_vpool.gather_config.mds"></span>
         <a data-bind="popover: {
@@ -175,12 +162,22 @@ but WITHOUT ANY WARRANTY of any kind.
             </li>
         </ul>
     </div>
+    <span data-bind="text: $root.canContinue().reasons"></span>
+
+    <div class="alert alert-warning" data-bind="visible: $root.gatherWarnings().reasons.length > 0" style="margin-bottom: -10px;">
+        <p data-bind="visible: $root.gatherWarnings().reasons.length === 0"><span data-i18n="ovs:generic.errorsfound"></span></p>
+        <p data-bind="visible: $root.gatherWarnings().reasons.length > 0"><span data-i18n="ovs:generic.followingerrorsfound"></span></p>
+        <ul data-bind="visible: $root.gatherWarnings().reasons.length > 0, foreach: $root.gatherWarnings().reasons">
+            <li data-bind="html: $data"></li>
+        </ul>
+    </div>
     <div class="alert alert-danger" data-bind="visible: !$root.canContinue().value || $root.canContinue().showErrors" style="margin-bottom: -10px;">
         <p data-bind="visible: $root.canContinue().reasons.length === 0"><span data-i18n="ovs:generic.errorsfound"></span></p>
         <p data-bind="visible: $root.canContinue().reasons.length > 0"><span data-i18n="ovs:generic.followingerrorsfound"></span></p>
         <ul data-bind="visible: $root.canContinue().reasons.length > 0, foreach: $root.canContinue().reasons">
-            <li data-bind="text: $data"></li>
+            <li data-bind="html: $data"></li>
         </ul>
     </div>
+    <!-- /ko -->
     <!-- /ko -->
 </div>

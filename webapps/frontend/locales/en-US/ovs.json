@@ -897,16 +897,12 @@
                 "use_local_disk": "Use local disk"
             },
             "gather_config": {
-                "advanced": {
-                    "accept_text": "I understand the risks",
-                    "advanced_text": "Advanced settings",
-                    "advanced_warning": "Configuring these settings can help shape the Open vStorage Volumedriver to your specific needs.<br/><br/>When settings these parameters, make sure to understand their impact towards the backend and its preset. Improperly configured settings can cause performance loss!",
-                    "calculate_message": "Adjusting the Volume Writer Buffer will set the parameters below to a standard. Reconfiguring any of the parameters below will update the Volume Write Buffer.",
-                    "number_of_scos_in_tlog": "Number of SCOs in tlog:",
-                    "non_disposable_scos_factor": "Non disposable SCO factor:"
-                },
+                "accept_text": "I understand the risks",
+                "advanced_text": "Advanced settings",
+                "advanced_warning": "Configuring these settings can help shape the Open vStorage Volumedriver to your specific needs.<br/><br/>When settings these parameters, make sure to understand their impact towards the backend and its preset. Improperly configured settings can cause performance loss!",
                 "cache_no_proxies": "No proxies can be deployed making use of local Cache with current Global Write Buffer size",
                 "cache_too_small": "Only __amount__ prox__multiple__ can be deployed making use of local Cache with current Global Write Buffer size",
+                "calculate_message": "Adjusting the Volume Writer Buffer will set the parameters below to a standard. Reconfigure any of the parameters below will update the Volume Write Buffer.",
                 "cluster_size": "Cluster Size:",
                 "dtl": "Distributed Transaction Log Information",
                 "dtl_mode": "Mode:",
@@ -917,11 +913,19 @@
                 "mds": "MDS Information",
                 "mds_safety": "Safety:",
                 "no_space_left": "No space left",
+                "non_disposable_scos_factor": "Nondisposable SCO factor:",
+                "non_disposable_factor_too_small": "Nondisposable SCO factor must be at least __minimal_number__.<br/>Please do so by adjusting the &quot;__scos_per_tlog__&quot; and/or &quot;__volume_write_buffer__&quot; parameters ",
+                "non_disposable_factor_help_title": "Nondisposable SCO factor Information:",
+                "non_disposable_factor_help": "The nondisposable SCO factor determines the maximum amount of non-disposable data permitted for this volume.<br/><br/>Volume write buffer = SCO size * Number of SCOs in tlog * nondisposable SCO factor",
+
                 "over_allocation": "Over-allocation detected",
                 "sco_size": "SCO Size:",
+                "scos_per_tlog_with_colon": "Number of SCOs in tlog:",
+                "scos_per_tlog": "number of SCOs in tlog",
                 "title_write_buffer": "StorageDriver Write Buffer",
                 "volume": "Volume Information",
-                "volume_write_buffer": "Volume Write Buffer:"
+                "volume_write_buffer_with_colon": "Volume Write Buffer:",
+                "volume_write_buffer": "volume write buffer"
             },
             "gather_fragment_cache": {
                 "alba_backend": "Backend:",
