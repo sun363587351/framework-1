@@ -143,6 +143,7 @@
         "finish": "Finish",
         "finished": "Finished",
         "followingerrorsfound": "Following errors were found:",
+        "followingwarningsfound": "Following warnings were found:",
         "for": "for",
         "fragmentCaches": {
             "none": "No Fragment caching",
@@ -343,6 +344,7 @@
         "vpools": "vPools",
         "vtemplate": "vTemplate",
         "warning": "Warning",
+        "warningsfound": "Warnings were found. Please proceed with caution!",
         "welcome": "Welcome",
         "write": "Write",
         "write_speed": "Write Speed",

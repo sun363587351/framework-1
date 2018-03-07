@@ -36,7 +36,7 @@ define([ 'knockout'
          * This uses the mapping to have the simple mode available
          * @return {object}
          */
-        self.calculateAdvancedFactors = function(sco_size, write_buffer, scos_per_tlog) {
+        self.calculateNondispSCOFactor = function(sco_size, write_buffer, scos_per_tlog) {
             write_buffer = ko.utils.unwrapObservable(write_buffer);
             scos_per_tlog = ko.utils.unwrapObservable(scos_per_tlog);
             sco_size = ko.utils.unwrapObservable(sco_size);

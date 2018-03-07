@@ -42,16 +42,14 @@ define([
         self.dtl_enabled        = ko.observable();
         self.tlog_multiplier    = ko.observable();  // Number of sco's in tlog - returned by the vpool metadata
         self.write_buffer       = ko.observable()   // Volume Write buffer
-            .extend({numeric: {min: 128, max: 163840, allowUndefined: false}, // 20 * 16 * 128
+            .extend({numeric: {min: 128, allowUndefined: false},
                      rateLimit: { method: "notifyWhenChangesStop", timeout: 400}});
         self.scos_per_tlog = ko.observable()
-            .extend({numeric: {min: 4, max: 16, allowUndefined: false},
+            .extend({numeric: {min: 4, allowUndefined: false},
                      rateLimit: { method: "notifyWhenChangesStop", timeout: 400}});
         self.non_disposable_scos_factor = ko.observable()
-            .extend({numeric: {min: 1.5, max: 20, allowUndefined: false},
+            .extend({numeric: {min: 1.5, allowUndefined: false},
                      rateLimit: { method: "notifyWhenChangesStop", timeout: 400}});
-        // Own properties
-        // self.advanced           = ko.observable(false);  // Make use of the advanced config
 
         // Default data
         var vmData = $.extend({
@@ -59,8 +57,8 @@ define([
             dtl_transport: 'tcp',
             dtl_mode: 'no_sync',
             mds_config: {},
-            sco_size: 4,
-            write_buffer: 128,
+            sco_size: 64,
+            write_buffer: 1024,
             scos_per_tlog: 8
         }, data);
 
@@ -75,7 +73,7 @@ define([
         self.non_disposable_scos_factor = ko.computed( {
             deferEvaluation: true,
             read: function() {
-                return storageDriverService.calculateAdvancedFactors(self.sco_size(), self.write_buffer(), self.scos_per_tlog())
+                return storageDriverService.calculateNondispSCOFactor(self.sco_size(), self.write_buffer(), self.scos_per_tlog())
             }
         });
         // Bind the data into this
